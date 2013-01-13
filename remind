@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+# Script looks for [[date]] and if it finds it and it matches the
+# current minute, then it will send a noficiation to your devices.
+
+import httplib, os, re, urllib
+from datetime import datetime, date, time
+
+todo_file = os.environ['TODO_FILE']
+api_token = os.environ['PUSHOVER_API_TOKEN']
+user = os.environ['PUSHOVER_USER']
+
+today = datetime.today()
+todayDt = str(today.date())
+todayDttm = today.strftime('%Y-%m-%d %H:%M')
+
+f = open(todo_file)
+for line in f:
+	m = re.search('\[(.*?)\]', line)
+	if m is not None:
+		dttm = m.group(1)
+		# No time found, so assume midnight
+		if dttm.find(':') == -1:
+			dttm += ' 00:00'
+		
+		if dttm == todayDttm:
+			conn = httplib.HTTPSConnection("api.pushover.net:443")
+			conn.request('POST', '/1/messages.json',
+				urllib.urlencode({
+					'token': api_token,
+					'user': user,
+					'message': line,
+			}), { 'Content-type': 'application/x-www-form-urlencoded' })
+			conn.getresponse()
+f.close()
