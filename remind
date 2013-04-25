@@ -24,7 +24,7 @@ for line in f:
 			dttm += ' 00:00'
 		
 		if dttm == todayDttm:
-			conn = httplib.HTTPSConnection("api.pushover.net:443")
+			conn = httplib.HTTPSConnection('api.pushover.net:443')
 			conn.request('POST', '/1/messages.json',
 				urllib.urlencode({
 					'token': api_token,
