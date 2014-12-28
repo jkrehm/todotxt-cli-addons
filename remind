@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
 # Script looks for [[date]] and if it finds it and it matches the
-# current minute, then it will send a noficiation to your devices.
+# current minute, then it will send a notification to your devices.
 
-import httplib, os, re, urllib
+import json, os, re, requests
 from datetime import datetime, date, time
 
-todo_file = os.environ['TODO_FILE']
-api_token = os.environ['PUSHOVER_API_TOKEN']
-user = os.environ['PUSHOVER_USER']
+todo_file = os.environ.get('TODO_FILE')
+api_type = os.environ.get('API_TYPE')
+api_token = os.environ.get('API_TOKEN')
+api_user = os.environ.get('API_USER')
 
 today = datetime.today()
 todayDt = str(today.date())
@@ -16,20 +17,33 @@ todayDttm = today.strftime('%Y-%m-%d %H:%M')
 
 f = open(todo_file)
 for line in f:
-	m = re.search('\[(.*?)\]', line)
-	if m is not None:
-		dttm = m.group(1)
-		# No time found, so assume midnight
-		if dttm.find(':') == -1:
-			dttm += ' 00:00'
-		
-		if dttm == todayDttm:
-			conn = httplib.HTTPSConnection('api.pushover.net:443')
-			conn.request('POST', '/1/messages.json',
-				urllib.urlencode({
-					'token': api_token,
-					'user': user,
-					'message': line,
-			}), { 'Content-type': 'application/x-www-form-urlencoded' })
-			conn.getresponse()
+    m = re.search('\[(.*?)\]', line)
+    if m is not None:
+        dttm = m.group(1)
+        # No time found, so assume 8am
+        if dttm.find(':') == -1:
+            dttm += ' 08:00'
+
+        if dttm == todayDttm:
+
+            if api_type == 'PUSHBULLET':
+
+                r = requests.post('https://api.pushbullet.com/v2/pushes', data=json.dumps({
+                    'type'  : 'note',
+                    'title' : 'Reminder',
+                    'body'  : line
+                }), auth=(api_token, ''), headers={'content-type' : 'application/json'});
+
+            elif api_type == 'PUSHOVER':
+
+                r = requests.post('https://api.pushover.net/1/messages.json', data={
+                    'token'   : api_token,
+                    'user'    : api_user,
+                    'message' : line
+                });
+
+            else:
+
+                print 'Invalid API type specified'
+
 f.close()
